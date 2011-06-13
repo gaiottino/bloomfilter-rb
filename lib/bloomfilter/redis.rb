@@ -8,7 +8,8 @@ module BloomFilter
         :seed    => Time.now.to_i,
         :namespace => 'redis',
         :eager  => false,
-        :server => {}
+        :server => {},
+        :counting => false
       }.merge opts
       @db = ::Redis.new(@opts[:server])
 
@@ -20,9 +21,15 @@ module BloomFilter
     def insert(key, ttl=nil)
       @db.pipelined do
         indexes_for(key) { |idx| @db.setbit @opts[:namespace], idx, 1 }
+        @db.incr "#{@opts[:namespace]}/count" if @opts[:counting]
       end
     end
     alias :[]= :insert
+    
+    def count
+      c = @db.get "#{@opts[:namespace]}/count" || "0"
+      c.to_i
+    end
 
     def include?(*keys)
       keys.each do |key|
