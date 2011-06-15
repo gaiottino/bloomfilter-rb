@@ -11,7 +11,12 @@ module BloomFilter
         :server => {},
         :counting => false
       }.merge opts
-      @db = ::Redis.new(@opts[:server])
+      
+      unless @opts[:redis]
+        @db = ::Redis.new(@opts[:server])
+      else
+        @db = @opts[:redis]
+      end
 
       if @opts[:eager]
         @db.setbit @opts[:namespace], @opts[:size]+1, 1
