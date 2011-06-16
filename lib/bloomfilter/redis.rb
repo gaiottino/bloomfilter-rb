@@ -9,7 +9,8 @@ module BloomFilter
         :namespace => 'redis',
         :eager  => false,
         :server => {},
-        :counting => false
+        :counting => false,
+        :expire => false
       }.merge opts
       
       unless @opts[:redis]
@@ -23,10 +24,15 @@ module BloomFilter
       end
     end
 
-    def insert(key, ttl=nil)
-      @db.pipelined do
+    def insert(key)
+      result = @db.pipelined do
         indexes_for(key) { |idx| @db.setbit @opts[:namespace], idx, 1 }
         @db.incr "#{@opts[:namespace]}/count" if @opts[:counting]
+      end
+      
+      count = result.last
+      if count == 1 && @opts[:expire]
+        @db.expire @opts[:namespace], @opts[:expire]
       end
     end
     alias :[]= :insert
